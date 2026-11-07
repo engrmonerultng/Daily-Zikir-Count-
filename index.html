@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Zikir Counter</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 15px;
+  font-family: Arial, sans-serif;
+  background: #f1f5f2;
+  color: #183b2b;
+}
+
+.container {
+  max-width: 650px;
+  margin: auto;
+}
+
+.header {
+  background: #145c3b;
+  color: white;
+  text-align: center;
+  padding: 25px 10px;
+  border-radius: 15px;
+}
+
+.header h2 {
+  margin: 5px;
+}
+
+.card {
+  background: white;
+  margin-top: 15px;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px #00000010;
+}
+
+.center {
+  text-align: center;
+}
+
+.count {
+  font-size: 48px;
+  font-weight: bold;
+  margin: 15px;
+  color: #145c3b;
+}
+
+button {
+  border: none;
+  padding: 13px 20px;
+  margin: 5px;
+  border-radius: 9px;
+  font-size: 16px;
+  cursor: pointer;
+  background: #145c3b;
+  color: white;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+.secondary {
+  background: #37875c;
+}
+
+.danger {
+  background: #c0392b;
+}
+
+input {
+  padding: 11px;
+  border: 1px solid #ccc;
+  border-radius: 7px;
+  font-size: 15px;
+  max-width: 100%;
+}
+
+input[type="number"] {
+  width: 100px;
+}
+
+input[type="date"] {
+  width: 100%;
+}
+
+.history {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.history th, .history td {
+  border-bottom: 1px solid #ddd;
+  padding: 12px 5px;
+  text-align: center;
+}
+
+.history th {
+  background: #e7f2e9;
+}
+
+.small {
+  color: #777;
+  font-size: 13px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <h2>☪ Daily Zikir Counter</h2>
+    <p>Remember Allah • Every Day</p>
+  </div>
+
+  <div class="card center">
+    <h3>Today's Zikir</h3>
+    <p id="todayDate"></p>
+
+    <div class="count" id="count">0</div>
+
+    <button onclick="addCount(1)">+1</button>
+    <button class="secondary" onclick="addCount(10)">+10</button>
+    <button class="secondary" onclick="addCount(100)">+100</button>
+
+    <br><br>
+
+    <input type="number" id="custom" placeholder="Custom number" min="1">
+    <button onclick="addCustom()">Add</button>
+
+    <br><br>
+    <button class="danger" onclick="undoCount()">Undo 1</button>
+    <button class="danger" onclick="resetToday()">Reset Today</button>
+  </div>
+
+  <div class="card">
+    <h3>📊 Zikir Statistics</h3>
+
+    <p>Total Zikir: <b id="total">0</b></p>
+    <p>Days Recorded: <b id="days">0</b></p>
+    <p>Today's Count: <b id="todayTotal">0</b></p>
+  </div>
+
+  <div class="card">
+    <h3>📈 Daily Zikir Graph</h3>
+
+    <label>Start Date</label>
+    <input type="date" id="startDate">
+
+    <br><br>
+
+    <label>End Date</label>
+    <input type="date" id="endDate">
+
+    <br><br>
+
+    <button onclick="showGraph()">Show Graph</button>
+    <button class="secondary" onclick="last7Days()">Last 7 Days</button>
+    <button class="secondary" onclick="last30Days()">Last 30 Days</button>
+
+    <canvas id="zikirChart"></canvas>
+  </div>
+
+  <div class="card">
+    <h3>📅 Daily History</h3>
+
+    <table class="history">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Zikir Count</th>
+        </tr>
+      </thead>
+      <tbody id="history"></tbody>
+    </table>
+  </div>
+
+  <div class="card center">
+    <p class="small">
+      Your daily zikir records are saved automatically in this browser.
+    </p>
+  </div>
+
+</div>
+
+<script>
+
+// Get today's date
+function getToday() {
+  const d = new Date();
+  return d.getFullYear() + "-" +
+    String(d.getMonth()+1).padStart(2,"0") + "-" +
+    String(d.getDate()).padStart(2,"0");
+}
+
+// Load saved data
+let data = JSON.parse(localStorage.getItem("zikirData")) || {};
+
+let today = getToday();
+
+// Save data
+function saveData() {
+  localStorage.setItem("zikirData", JSON.stringify(data));
+}
+
+// Update counter
+function update() {
+  today = getToday();
+
+  let current = data[today] || 0;
+
+  document.getElementById("count").innerText = current;
+  document.getElementById("todayTotal").innerText = current;
+
+  document.getElementById("todayDate").innerText =
+    new Date(today + "T00:00:00").toDateString();
+
+  let total = Object.values(data).reduce((a,b) => a+b, 0);
+
+  document.getElementById("total").innerText = total;
+
+  document.getElementById("days").innerText =
+    Object.keys(data).filter(k => data[k] > 0).length;
+
+  showHistory();
+}
+
+// Add zikir
+function addCount(n) {
+  today = getToday();
+  data[today] = (data[today] || 0) + n;
+  saveData();
+  update();
+}
+
+// Custom count
+function addCustom() {
+  let n = parseInt(document.getElementById("custom").value);
+
+  if (!n || n < 1) {
+    alert("Enter a valid number");
+    return;
+  }
+
+  addCount(n);
+  document.getElementById("custom").value = "";
+}
+
+// Undo one
+function undoCount() {
+  today = getToday();
+
+  if ((data[today] || 0) > 0) {
+    data[today]--;
+    saveData();
+    update();
+  }
+}
+
+// Reset today's count
+function resetToday() {
+  if (confirm("Are you sure you want to reset today's count?")) {
+    today = getToday();
+    delete data[today];
+    saveData();
+    update();
+  }
+}
+
+// Show daily history
+function showHistory() {
+  let dates = Object.keys(data).sort().reverse();
+
+  document.getElementById("history").innerHTML =
+    dates.map(date => `
+      <tr>
+        <td>${date}</td>
+        <td>${data[date].toLocaleString()}</td>
+      </tr>
+    `).join("") || "<tr><td colspan='2'>No records yet</td></tr>";
+}
+
+// Graph
+let chart;
+
+function showGraph() {
+  let start = document.getElementById("startDate").value;
+  let end = document.getElementById("endDate").value;
+
+  if (!start || !end || start > end) {
+    alert("Please select a valid date range");
+    return;
+  }
+
+  let labels = [];
+  let values = [];
+
+  let current = new Date(start + "T00:00:00");
+  let last = new Date(end + "T00:00:00");
+
+  while (current <= last) {
+    let date = current.getFullYear() + "-" +
+      String(current.getMonth()+1).padStart(2,"0") + "-" +
+      String(current.getDate()).padStart(2,"0");
+
+    labels.push(date);
+    values.push(data[date] || 0);
+
+    current.setDate(current.getDate()+1);
+  }
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(document.getElementById("zikirChart"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Daily Zikir",
+        data: values,
+        backgroundColor: "#238653",
+        borderRadius: 5
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+// Last 7 days
+function last7Days() {
+  setRange(7);
+}
+
+// Last 30 days
+function last30Days() {
+  setRange(30);
+}
+
+function setRange(days) {
+  let end = new Date();
+  let start = new Date();
+  start.setDate(start.getDate() - days + 1);
+
+  document.getElementById("startDate").value =
+    formatDate(start);
+
+  document.getElementById("endDate").value =
+    formatDate(end);
+
+  showGraph();
+}
+
+function formatDate(d) {
+  return d.getFullYear() + "-" +
+    String(d.getMonth()+1).padStart(2,"0") + "-" +
+    String(d.getDate()).padStart(2,"0");
+}
+
+// Initial setup
+update();
+last7Days();
+
+</script>
+
+</body>
+</html>
